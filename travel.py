@@ -272,6 +272,20 @@ def deleteSchedule():
     else:
         return f'Please Sign In!',401
 
+def cek_seat(scheID,tanggal):
+    connection=connect()
+    cursor=connection.cursor()
+    try:
+        sqlquery2="select available_seat from orders where tanggal=%s and schedule_id=%s order by available_seat"
+        cursor.execute(sqlquery2,(tanggal,scheID,))
+        return cursor.fetchone()[0]
+    except:
+        return None
+    finally:
+        if connection:
+            cursor.close()
+            connection.close()
+
 @app.route('/searchSchedule',methods=["GET"])
 def searchSchedule():
     if login():
@@ -284,7 +298,7 @@ def searchSchedule():
             tanggal=body["tanggal"]
             # format tanggal => yyyy-mm-dd
             if tanggal>=str(datetime.now())[0:10]:
-                sqlquery="select s.dari,s.menuju,s.harga,s.berangkat,s.sampai,c.agent,c.capacity,c.merk,c.fasilitas \
+                sqlquery="select s.dari,s.menuju,s.harga,s.berangkat,s.sampai,c.agent,c.capacity,c.merk,c.fasilitas,s.schedule_id \
                     from schedule as s \
                     inner join cars as c \
                     on s.car_id=c.car_id \
@@ -299,15 +313,18 @@ def searchSchedule():
                     cursor.execute(sqlquery,(dari,menuju,tanggal,))
                 mobile_records = cursor.fetchall()
                 a=[]
-                print("Print each row and it's columns values")
                 for row in mobile_records:
+                    availseat=row[6]
+                    if cek_seat(row[9],tanggal)!=None:
+                        availseat=cek_seat(row[9],tanggal)
                     a.append({"Dari" : row[0],
                     "Menuju" : row[1],
                     "Harga" : row[2],
                     "Berangkat":str(row[3]),
                     "Sampai":str(row[4]),
                     "Travel Agent":row[5],
-                    "Kapasitas": row[6],
+                    "Kapasitas":row[6],
+                    "Kursi tersedia": availseat,
                     "Merk Bus":row[7],
                     "Fasilitas":row[8] })
                 if a!=[]:
@@ -406,7 +423,7 @@ def toproute():
     connection=connect()
     cursor=connection.cursor()
     try:
-        sqlquery="select s.dari,s.menuju from schedule as s \
+        sqlquery="select s.dari,s.menuju,count(s.dari) from schedule as s \
                 inner join orders as o \
                 on s.schedule_id=o.schedule_id \
                 group by s.dari,s.menuju \
@@ -417,7 +434,8 @@ def toproute():
         print("Print each row and it's columns values")
         for row in mobile_records:
             a.append({"Dari" : row[0],
-            "Menuju" : row[1] })
+            "Menuju" : row[1],
+            "Jumlah pesanan":row[2] })
         if a!=[]:
             return jsonify(a)
         else:
