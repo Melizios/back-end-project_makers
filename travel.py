@@ -475,13 +475,22 @@ def topschedule():
         sqlquery="select count(extract(isodow from tanggal)),extract(isodow from tanggal) as days from orders\
             group by extract(isodow from tanggal) \
             order by count(extract(isodow from tanggal))desc,extract(isodow from tanggal)"
+        # sqlquery="select count(extract(isodow from o.tanggal)), \
+        #     extract(isodow from o.tanggal) as days, \
+        #     s.berangkat from orders as o\
+        #     inner join schedule as s \
+        #     on o.schedule_id=s.schedule_id \
+        #     group by extract(isodow from o.tanggal),s.berangkat \
+        #     order by count(extract(isodow from o.tanggal))desc,extract(isodow from o.tanggal) limit 5"
         cursor.execute(sqlquery)
         mobile_records = cursor.fetchall()
         a=[]
         print("Print each row and it's columns values")
         for row in mobile_records:
             a.append({"Jumlah pesanan" : row[0],
-            "Hari" : daysconverter(row[1]) })
+            "Hari" : daysconverter(row[1])
+            # ,"jam": str(row[2])
+             })
         if a!=[]:
             return jsonify(a)
         else:
